@@ -1,0 +1,16 @@
+{
+  "name": "kada-ai-assistant",
+  "version": "1.0.0",
+  "description": "Domain-specific AI assistant for KADA coding bootcamp using Gemini API",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
