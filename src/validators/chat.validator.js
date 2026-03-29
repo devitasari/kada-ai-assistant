@@ -14,3 +14,13 @@ export function validateChatPayload(body) {
     message,
   };
 }
+
+export function validateResetPayload(body) {
+  const { sessionId } = body || {};
+
+  if (!sessionId || typeof sessionId !== "string") {
+    throw new Error("sessionId is required and must be a string");
+  }
+
+  return { sessionId };
+}

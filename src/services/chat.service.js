@@ -52,12 +52,12 @@ async function processMessage({ sessionId, message }) {
 
   const reply = await geminiService.generateText(finalPrompt);
 
-  console.log(finalPrompt, reply)
+  // console.log(finalPrompt, reply)
 
   historyService.addMessage(sessionId, "user", message);
   historyService.addMessage(sessionId, "assistant", reply);
 
-  console.log(historyService.getSessionHistory(sessionId))
+  // console.log(historyService.getSessionHistory(sessionId))
 
   return {
     sessionId,
@@ -67,6 +67,11 @@ async function processMessage({ sessionId, message }) {
   };
 }
 
+async function resetSession(sessionId) {
+  historyService.clearSession(sessionId);
+}
+
 export const chatService = {
   processMessage,
+  resetSession,
 };
