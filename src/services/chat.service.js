@@ -50,7 +50,13 @@ async function processMessage({ sessionId, message }) {
     intent,
   });
 
-  const reply = await geminiService.generateText(finalPrompt);
+  let reply;
+
+  try {
+    reply = await geminiService.generateText(finalPrompt);
+  } catch (error) {
+    reply = "Sorry, AI system currently unavailable. Please try again later or contact KADA admin."
+  }
 
   // console.log(finalPrompt, reply)
 
