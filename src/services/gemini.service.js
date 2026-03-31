@@ -2,11 +2,11 @@ import { ai } from "../config/ai.js";
 import { env } from "../config/env.js";
 import { withRetry } from "../utils/retry.js";
 
-async function generateText(prompt) {
+async function generateText(prompt, modelOverride = null) {
   const response = await withRetry(
     async () => {
       return await ai.models.generateContent({
-        model: env.geminiModel,
+        model: modelOverride || env.geminiModel,
         contents: prompt,
       });
     },

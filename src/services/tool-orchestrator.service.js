@@ -9,7 +9,8 @@ async function detectIntent(userMessage) {
   const prompt = buildToolRoutingPrompt(userMessage);
   const label = await geminiService.generateText(prompt);
 
-  return label.toUpperCase().trim();
+  // Membersihkan kemungkinan markdown atau newline dari output AI
+  return label.replace(/[^a-zA-Z_]/g, "").toUpperCase().trim();
 }
 
 async function resolveTools(userMessage) {

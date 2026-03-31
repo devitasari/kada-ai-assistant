@@ -4,7 +4,10 @@ import { geminiService } from "./gemini.service.js";
 import { buildSystemPrompt } from "../prompts/system.prompt.js";
 import { aiResponseSchemaDescription } from "../utils/ai-response-schema.js";
 import { safeJsonParse } from "../utils/json.js";
-import { response } from "express";
+import { functionCallingService } from "./function-calling.service.js";
+import { logger } from "../utils/logger.js";
+import { retrievalService } from "./retrieval.service.js";
+import { env } from "../config/env.js";
 
 function formatHistory(history) {
   if (!history.length) return "No previous conversation.";
@@ -14,46 +17,60 @@ function formatHistory(history) {
     .join("\n");
 }
 
-function buildFinalPrompt({ systemPrompt, history, userMessage, toolContext, intent }) {
+function buildFinalPrompt({ systemPrompt, history, userMessage, toolContext, intent, retrievedDocs }) {
   return `
-${systemPrompt}
+    ${systemPrompt}
 
-Conversation history:
-${history}
+    Conversation history:
+    ${history}
 
-Detected intent:
-${intent}
+    Detected intent:
+    ${intent}
 
-Tool context:
-${toolContext ? JSON.stringify(toolContext, null, 2) : "No tool data"}
+    Tool context:
+    ${toolContext ? JSON.stringify(toolContext, null, 2) : "No tool data"}
 
-Current user message:
-"${userMessage}"
+    Current user message:
+    "${userMessage}"
 
-Instructions:
-- Answer naturally as KADA AI Assistant.
-- Use tool context if available.
-- Do not invent facts.
-- If out of scope, politely say you only handle KADA-related questions.
+    Retrieved knowledge:
+    ${retrievedDocs.length ? JSON.stringify(retrievedDocs, null, 2) : "No retrieved documents"}
 
-${aiResponseSchemaDescription}
-
-Current user message:
-"${userMessage}"
+    ${aiResponseSchemaDescription}
   `.trim();
+
 }
 
 async function processMessage({ sessionId, message }) {
   const history = await historyService.getSessionHistory(sessionId);
-  console.log(history)
 
-  const { intent, toolData } = await toolOrchestratorService.resolveTools(message);
+  const { intent, toolData } = env.useNativeFunctionCalling ? await functionCallingService.generateWithFunctionCalling(message, formatHistory(history)) : await toolOrchestratorService.resolveTools(message);
+
+  // Optimasi: Jika Out of Scope, tidak perlu memanggil Gemini lagi
+  if (intent === "OUT_OF_SCOPE") {
+    const structured = {
+      answer: "I'm sorry, as the KADA AI assistant, I can only help with questions regarding KADA's programs, schedules, pricing, and registration.",
+      needsHumanSupport: false,
+      followUpQuestion: "Is there anything else related to KADA you'd like to ask?",
+      confidence: "high"
+    };
+
+    const assistantMessage = `${structured.answer} ${structured.followUpQuestion}`;
+    
+    await historyService.addMessage(sessionId, "user", message);
+    await historyService.addMessage(sessionId, "assistant", assistantMessage);
+    
+    return { sessionId, intent, response: structured, toolUsed: [] };
+  }
+
+  const retrievedDocs = retrievalService.retrieveRelevantDocs(message);
 
   const finalPrompt = buildFinalPrompt({
     systemPrompt: buildSystemPrompt(),
     history: formatHistory(history),
     userMessage: message,
     toolContext: toolData,
+    retrievedDocs,
     intent,
   });
 
@@ -64,7 +81,7 @@ async function processMessage({ sessionId, message }) {
     modelText = await geminiService.generateText(finalPrompt);
     structured = safeJsonParse(modelText);
   } catch (error) {
-    console.log(error);
+    logger.error(error)
     structured = null;
   }
 
@@ -75,6 +92,14 @@ async function processMessage({ sessionId, message }) {
       followUpQuestion: null,
       confidence: "low"
     }
+  }
+
+  if (!structured.sources) {
+    structured.sources = retrievedDocs.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      source: doc.source,
+    }));
   }
 
   const assistantMessage = structured.followUpQuestion 
