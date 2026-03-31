@@ -44,7 +44,7 @@ Current user message:
 }
 
 async function processMessage({ sessionId, message }) {
-  const history = historyService.getSessionHistory(sessionId);
+  const history = await historyService.getSessionHistory(sessionId);
   console.log(history)
 
   const { intent, toolData } = await toolOrchestratorService.resolveTools(message);
@@ -81,8 +81,8 @@ async function processMessage({ sessionId, message }) {
     ? `${structured.answer} ${structured.followUpQuestion}`
     : structured.answer;
 
-  historyService.addMessage(sessionId, "user", message);
-  historyService.addMessage(sessionId, "assistant", assistantMessage);
+  await historyService.addMessage(sessionId, "user", message);
+  await historyService.addMessage(sessionId, "assistant", assistantMessage);
 
   return {
     sessionId,
@@ -93,7 +93,7 @@ async function processMessage({ sessionId, message }) {
 }
 
 async function resetSession(sessionId) {
-  historyService.clearSession(sessionId);
+  await historyService.clearSession(sessionId);
 }
 
 export const chatService = {

@@ -1,27 +1,39 @@
+import { redisClient } from "../config/redis.js";
+
+const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24 jam
 const MAX_HISTORY = 20; // Disarankan 20 pesan (10 putaran) untuk konteks yang lebih baik
 
-const sessionStore = new Map();
-
-function getSessionHistory(sessionId) {
-  return sessionStore.get(sessionId) || [];
+function getSessionKey(sessionId) {
+  return `chat:session:${sessionId}`;
 }
 
-function addMessage(sessionId, role, text) {
-  const currentHistory = getSessionHistory(sessionId);
+async function getSessionHistory(sessionId) {
+  const raw = await redisClient.get(getSessionKey(sessionId));
+  return raw ? JSON.parse(raw) : [];
+}
 
-  currentHistory.push({
+async function addMessage(sessionId, role, text) {
+  const history = await getSessionHistory(sessionId);
+
+  history.push({
     role,
     text,
   });
 
   // Batasi history supaya tidak kepanjangan
-  const trimmedHistory = currentHistory.slice(-MAX_HISTORY);
+  const trimmedHistory = history.slice(-MAX_HISTORY);
 
-  sessionStore.set(sessionId, trimmedHistory);
+  await redisClient.set(
+    getSessionKey(sessionId),
+    JSON.stringify(trimmedHistory),
+    {
+      EX: SESSION_TTL_SECONDS,
+    }
+  );
 }
 
-function clearSession(sessionId) {
-  sessionStore.delete(sessionId);
+async function clearSession(sessionId) {
+  await redisClient.del(getSessionKey(sessionId));
 }
 
 export const historyService = {
