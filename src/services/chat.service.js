@@ -2,6 +2,9 @@ import { historyService } from "./history.service.js";
 import { toolOrchestratorService } from "./tool-orchestrator.service.js";
 import { geminiService } from "./gemini.service.js";
 import { buildSystemPrompt } from "../prompts/system.prompt.js";
+import { aiResponseSchemaDescription } from "../utils/ai-response-schema.js";
+import { safeJsonParse } from "../utils/json.js";
+import { response } from "express";
 
 function formatHistory(history) {
   if (!history.length) return "No previous conversation.";
@@ -33,7 +36,10 @@ Instructions:
 - Do not invent facts.
 - If out of scope, politely say you only handle KADA-related questions.
 
-Now generate the final response:
+${aiResponseSchemaDescription}
+
+Current user message:
+"${userMessage}"
   `.trim();
 }
 
@@ -50,25 +56,33 @@ async function processMessage({ sessionId, message }) {
     intent,
   });
 
-  let reply;
+  let modelText;
+  let structured;
 
   try {
-    reply = await geminiService.generateText(finalPrompt);
+    modelText = await geminiService.generateText(finalPrompt);
+    structured = safeJsonParse(modelText);
   } catch (error) {
-    reply = "Sorry, AI system currently unavailable. Please try again later or contact KADA admin."
+    console.log(error);
+    structured = null;
   }
 
-  // console.log(finalPrompt, reply)
+  if (!structured) {
+    structured = {
+      answer: "Sorry, AI system currently unavailable. Please try again later or contact KADA admin.",
+      needsHumanSupport: true,
+      followupQuestion: null,
+      confidence: "low"
+    }
+  }
 
   historyService.addMessage(sessionId, "user", message);
-  historyService.addMessage(sessionId, "assistant", reply);
-
-  // console.log(historyService.getSessionHistory(sessionId))
+  historyService.addMessage(sessionId, "assistant", structured.answer);
 
   return {
     sessionId,
     intent,
-    reply,
+    response: structured,
     toolUsed: toolData ? Object.keys(toolData) : [],
   };
 }
