@@ -45,6 +45,7 @@ Current user message:
 
 async function processMessage({ sessionId, message }) {
   const history = historyService.getSessionHistory(sessionId);
+  console.log(history)
 
   const { intent, toolData } = await toolOrchestratorService.resolveTools(message);
 
@@ -71,13 +72,17 @@ async function processMessage({ sessionId, message }) {
     structured = {
       answer: "Sorry, AI system currently unavailable. Please try again later or contact KADA admin.",
       needsHumanSupport: true,
-      followupQuestion: null,
+      followUpQuestion: null,
       confidence: "low"
     }
   }
 
+  const assistantMessage = structured.followUpQuestion 
+    ? `${structured.answer} ${structured.followUpQuestion}`
+    : structured.answer;
+
   historyService.addMessage(sessionId, "user", message);
-  historyService.addMessage(sessionId, "assistant", structured.answer);
+  historyService.addMessage(sessionId, "assistant", assistantMessage);
 
   return {
     sessionId,
