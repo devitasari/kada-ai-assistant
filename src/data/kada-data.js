@@ -3,24 +3,17 @@ export const kadaData = {
     {
       id: "fullstack",
       name: "Fullstack Web Development",
-      duration: "16 weeks",
+      duration: "2.5 months",
       level: "Beginner to Intermediate",
-    },
-    {
-      id: "frontend",
-      name: "Frontend Development",
-      duration: "10 weeks",
-      level: "Beginner",
-    },
+    }
   ],
   pricing: {
-    fullstack: "Rp 8.500.000",
-    frontend: "Rp 5.000.000",
+    fullstack: "free",
   },
   schedule: {
     nextBatch: "15 April 2026",
-    classDays: "Saturday & Sunday",
-    classTime: "09:00 - 12:00 WIB",
+    classDays: "Monday until Friday",
+    classTime: "10:00 - 17:00 WIB",
   },
   registration: {
     steps: [

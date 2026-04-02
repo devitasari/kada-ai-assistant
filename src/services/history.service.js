@@ -1,7 +1,7 @@
 import { redisClient } from "../config/redis.js";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24 jam
-const MAX_HISTORY = 4; // Disarankan 20 pesan (10 putaran) untuk konteks yang lebih baik
+const MAX_HISTORY = 6; // Menyimpan 5 putaran percakapan terakhir
 
 function getSessionKey(sessionId) {
   return `chat:session:${sessionId}`;

@@ -1,5 +1,8 @@
-export function buildToolRoutingPrompt(userMessage) {
+export function buildToolRoutingPrompt(userMessage, historyText = "") {
   return `
+Conversation history for context:
+${historyText}
+
 Classify the user's intent into one of these exact labels:
 - GET_PROGRAMS
 - GET_SCHEDULE

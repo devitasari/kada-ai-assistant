@@ -8,6 +8,7 @@ import { functionCallingService } from "./function-calling.service.js";
 import { logger } from "../utils/logger.js";
 import { retrievalService } from "./retrieval.service.js";
 import { env } from "../config/env.js";
+import { chatLogRepository } from "../repositories/chat-log.repository.js";
 
 function formatHistory(history) {
   if (!history.length) return "No previous conversation.";
@@ -43,8 +44,11 @@ function buildFinalPrompt({ systemPrompt, history, userMessage, toolContext, int
 
 async function processMessage({ sessionId, message }) {
   const history = await historyService.getSessionHistory(sessionId);
+  const historyText = formatHistory(history);
 
-  const { intent, toolData } = env.useNativeFunctionCalling ? await functionCallingService.generateWithFunctionCalling(message, formatHistory(history)) : await toolOrchestratorService.resolveTools(message);
+  const { intent, toolData } = env.useNativeFunctionCalling 
+    ? await functionCallingService.generateWithFunctionCalling(message, historyText) 
+    : await toolOrchestratorService.resolveTools(message, historyText);
 
   // Optimasi: Jika Out of Scope, tidak perlu memanggil Gemini lagi
   if (intent === "OUT_OF_SCOPE") {
@@ -63,7 +67,12 @@ async function processMessage({ sessionId, message }) {
     return { sessionId, intent, response: structured, toolUsed: [] };
   }
 
-  const retrievedDocs = retrievalService.retrieveRelevantDocs(message);
+  let retrievedDocs = [];
+  // Hanya lakukan retrieval dokumen jika intent-nya bersifat umum (GENERAL_KADA).
+  // Untuk intent spesifik (GET_PROGRAMS, GET_PRICING, dll.), toolData sudah cukup.
+  if (intent === "GENERAL_KADA") {
+    retrievedDocs = await retrievalService.retrieveRelevantDocs(message);
+  }
 
   const finalPrompt = buildFinalPrompt({
     systemPrompt: buildSystemPrompt(),
@@ -94,12 +103,13 @@ async function processMessage({ sessionId, message }) {
     }
   }
 
-  if (!structured.sources) {
-    structured.sources = retrievedDocs.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      source: doc.source,
-    }));
+  // Pastikan structured.sources selalu berupa array
+  if (!structured.sources || !Array.isArray(structured.sources)) {
+    structured.sources = [];
+  }
+  // Jika ada dokumen yang diambil dan Gemini belum menyediakan sources, tambahkan dari retrievedDocs
+  if (retrievedDocs.length > 0 && structured.sources.length === 0) {
+    structured.sources = retrievedDocs.map(doc => ({ id: doc.id, title: doc.title, source: doc.source }));
   }
 
   const assistantMessage = structured.followUpQuestion 
@@ -108,6 +118,16 @@ async function processMessage({ sessionId, message }) {
 
   await historyService.addMessage(sessionId, "user", message);
   await historyService.addMessage(sessionId, "assistant", assistantMessage);
+
+  await chatLogRepository.saveChatLog({
+    sessionId,
+    userMessage: message,
+    assistantAnswer: assistantMessage,
+    detectedIntent: intent,
+    followUpQuestion: structured.followUpQuestion,
+    retrievedDocs: structured.sources,
+    confidence: structured.confidence,
+  });
 
   return {
     sessionId,

@@ -5,16 +5,16 @@ import { getSchedule } from "../tools/getSchedule.tool.js";
 import { getPricing } from "../tools/getPricing.tool.js";
 import { getRegistration } from "../tools/getRegistration.tool.js";
 
-async function detectIntent(userMessage) {
-  const prompt = buildToolRoutingPrompt(userMessage);
+async function detectIntent(userMessage, historyText) {
+  const prompt = buildToolRoutingPrompt(userMessage, historyText);
   const label = await geminiService.generateText(prompt);
 
   // Membersihkan kemungkinan markdown atau newline dari output AI
   return label.replace(/[^a-zA-Z_]/g, "").toUpperCase().trim();
 }
 
-async function resolveTools(userMessage) {
-  const intent = await detectIntent(userMessage);
+async function resolveTools(userMessage, historyText) {
+  const intent = await detectIntent(userMessage, historyText);
 
   switch (intent) {
     case "GET_PROGRAMS":
