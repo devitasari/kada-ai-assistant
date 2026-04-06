@@ -5,7 +5,7 @@ import { redisClient } from "./config/redis.js";
 
 async function startServer() {
   await redisClient.connect();
-  logger.info("Database connection handshake completed");
+  logger.info("Redis connection established");
 
   app.listen(env.port, () => {
     logger.info(`Server running on http://localhost:${env.port}`);

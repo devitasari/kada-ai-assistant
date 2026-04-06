@@ -1,4 +1,4 @@
-import { redisClient } from "./config/redis.js";
+import { redisClient } from "../config/redis.js";
 
 async function viewRedisContent() {
   try {
