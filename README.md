@@ -1,115 +1,169 @@
 # KADA AI Assistant
-**Hybrid AI Assistant with Intent Routing, Session Memory, and Selective Retrieval**
 
-AI-powered chatbot assistant for KADA Bootcamp that combines **structured data retrieval**, **lightweight knowledge retrieval**, **session memory**, and **LLM orchestration** to answer user questions accurately and efficiently.
+**KADA AI Assistant** is an AI-powered customer support backend for KADA Bootcamp, built with a **hybrid Retrieval-Augmented Generation (RAG)** architecture using **Gemini API**, **Supabase vector search**, and **intent-based orchestration**.
 
-This project is designed as a **hybrid AI assistant**, not a generic "ask the LLM everything" chatbot.
+It is designed to answer questions about **programs, schedules, pricing, registration, and general KADA information** with grounded, structured, and context-aware responses.
 
 ---
 
 ## 🚀 Overview
 
-KADA AI Assistant helps users ask questions about:
+This project is not a generic chatbot.
 
-- Available programs
-- Pricing / tuition
-- Batch schedules
-- Registration process
-- General FAQs about KADA
+It is a **production-oriented AI backend** that combines:
 
-Instead of forcing all information through a single RAG pipeline, this project uses a **hybrid architecture**:
+- **Intent classification**
+- **Structured tool-based retrieval**
+- **Semantic vector retrieval (RAG)**
+- **Prompt grounding**
+- **Multi-turn conversation memory**
+- **Structured JSON output**
+- **Fallback and human escalation logic**
 
-- **Structured questions** (programs, pricing, schedules, registration) are answered from deterministic JSON data
-- **General knowledge questions** are answered through retrieval from a knowledge base
-- **Conversation continuity** is maintained through Redis session history
-- **Chat logs and retrieval traces** are stored in Supabase for observability
+Instead of sending every user message directly to the LLM, the system first determines the best response strategy:
 
-This improves:
+- **Deterministic retrieval** for business-specific intents such as pricing, schedules, and registration
+- **Semantic vector retrieval** for broader informational questions using a Supabase-powered knowledge base
 
-- **Accuracy** for factual structured info
-- **Lower token usage**
-- **Faster response time**
-- **Better maintainability**
-- **Safer fallback behavior**
+This results in a more accurate, efficient, and reliable customer support assistant.
 
 ---
 
-## 🧠 Why This Project Matters
+## ✨ Key Features
 
-Many chatbot demos send everything directly to the LLM or force all knowledge into RAG.
+### 1) Intent Classification
+The assistant classifies user messages into domain-specific intents:
 
-This project intentionally avoids that.
+- `GET_PROGRAMS`
+- `GET_SCHEDULE`
+- `GET_PRICING`
+- `GET_REGISTRATION`
+- `GENERAL_KADA`
+- `OUT_OF_SCOPE`
 
-### Design principle:
-> **Use deterministic retrieval when the answer is structured. Use LLM reasoning only when needed.**
-
-That means:
-
-- Pricing should not be hallucinated from text embeddings
-- Schedule should not depend on semantic search if already structured
-- Registration steps should be served from reliable source data
-- General FAQ / broader questions can still benefit from retrieval + LLM generation
-
-This is closer to **real AI product architecture** than a basic prompt wrapper.
+This enables the backend to decide whether to:
+- use structured data retrieval,
+- perform semantic document retrieval,
+- or safely fall back when the query is unsupported.
 
 ---
 
-## 🏗️ Architecture
+### 2) Hybrid / Selective RAG Architecture
+This project uses a **hybrid RAG** strategy:
 
-### High-level flow
+- **Structured retrieval** for deterministic business intents  
+  (e.g. pricing, schedules, registration)
+- **Semantic retrieval** for broader knowledge questions  
+  (e.g. general KADA information)
+
+This architecture is more practical than sending all queries through vector search because it:
+- reduces unnecessary retrieval calls,
+- improves latency and cost efficiency,
+- keeps deterministic answers more reliable,
+- and still benefits from semantic search when natural-language knowledge lookup is needed.
+
+---
+
+### 3) Semantic Retrieval with Supabase Vector Search
+For general knowledge queries, the assistant performs **embedding-based retrieval** using a **Supabase vector database**.
+
+Typical flow:
+1. User asks a question
+2. Relevant documents are retrieved through **vector similarity search**
+3. Top-matching context is injected into the prompt
+4. Gemini generates a grounded answer based on retrieved knowledge
+
+This reduces hallucination and improves domain relevance.
+
+---
+
+### 4) Prompt Grounding
+Before calling the LLM, the system assembles a grounded prompt using:
+
+- system instructions,
+- conversation history,
+- detected intent,
+- structured tool context,
+- and retrieved semantic knowledge.
+
+This makes the response more aligned with real KADA information instead of relying only on the model’s internal knowledge.
+
+---
+
+### 5) Multi-Turn Conversation Support
+The assistant preserves **session history** so follow-up questions remain contextual.
+
+Examples:
+- “How much is the Fullstack program?”
+- “What about the next batch?”
+- “Yes, explain more.”
+
+This makes the interaction feel natural and stateful.
+
+---
+
+## Structured JSON Request Response Contract
+
+Request
+
+```json
+{
+  "sessionId": "user-0",
+  "message": "Berapa biaya investasinya?"
+}
+```
+
+The LLM is guided to return a predictable response schema such as:
+
+```json
+{
+  "answer": "Biaya fullstack Rp 8.500.000",
+  "needsHumanSupport": false,
+  "followUpQuestion": "Mau saya jelaskan jadwal batch berikutnya juga?",
+  "confidence": "high",
+  "sources": []
+}
+```
+---
+
+## 🧠 High Level Flow
 
 ```text
 User Message
    ↓
-Intent Classification
+Load Session History
    ↓
-┌──────────────────────────────────────────────────────────────┐
-│ If structured intent:                                       │
-│  - GET_PROGRAMS                                              │
-│  - GET_PRICING                                               │
-│  - GET_SCHEDULE                                              │
-│  - GET_REGISTRATION                                          │
-│ → Retrieve from kada-data (JSON)                             │
-└──────────────────────────────────────────────────────────────┘
+Intent Classification / Tool Orchestration
    ↓
-┌──────────────────────────────────────────────────────────────┐
-│ If GENERAL_KADA                                              │
-│ → Retrieve relevant docs from knowledge base                 │
-│   (Supabase primary, local fallback if configured)           │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│ If deterministic business intent            │
+│ → Structured retrieval / tool-based context │
+└──────────────────────────────────────────────┘
    ↓
-Load session history from Redis
+┌──────────────────────────────────────────────┐
+│ If GENERAL_KADA                             │
+│ → Semantic retrieval from Supabase vector DB│
+└──────────────────────────────────────────────┘
    ↓
-Build LLM prompt + tool context
+Prompt Assembly
+  - System Prompt
+  - History
+  - Intent
+  - Tool Context
+  - Retrieved Knowledge
    ↓
-Gemini generates structured JSON response
+Gemini Response Generation
    ↓
-Persist chat logs to Supabase
+Structured JSON Parsing
    ↓
-Return response to client
+Fallback Handling
+   ↓
+Source Injection
+   ↓
+Persist History + Chat Logs
+   ↓
+API Response
 ```
----
-
-## Example Request / Response
-
-### Request
-```json
-{
-  "message": "Biaya fullstack berapa?",
-  "sessionId": "abc123"
-}
-```
-
-### Response
-```json
-{
-  "answer": "Biaya program Fullstack Web Development adalah Rp 8.500.000.",
-  "needsHumanSupport": false,
-  "followUpQuestion": "Mau saya jelaskan jadwal batch berikutnya juga?",
-  "confidence": "high"
-}
-```
-
 ---
 
 ## Running Locally
@@ -177,3 +231,14 @@ kada-ai-assistant/
     └── validators/
         └── chat.validator.js
 ```
+
+## 🛠️ Tech Stack
+- Node.js / JavaScript
+- Gemini API
+- Supabase
+- Vector embeddings + semantic retrieval
+- Prompt engineering
+- Intent classification / tool orchestration
+- Conversation history management
+- Structured JSON output parsing
+- Chat logging / observability

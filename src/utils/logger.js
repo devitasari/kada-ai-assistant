@@ -1,4 +1,13 @@
 export const logger = {
-  info: (...args) => console.log("[INFO]", ...args),
-  error: (...args) => console.error("[ERROR]", ...args),
+  info: (message, ...args) => {
+    console.log(`[INFO] ${new Date().toISOString()}: ${message}`, ...args);
+  },
+  error: (message, ...args) => {
+    console.error(`[ERROR] ${new Date().toISOString()}: ${message}`, ...args);
+  },
+  debug: (message, ...args) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug(`[DEBUG] ${new Date().toISOString()}: ${message}`, ...args);
+    }
+  }
 };
