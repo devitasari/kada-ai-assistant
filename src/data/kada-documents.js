@@ -1,6 +1,5 @@
 export const kadaDocuments = [
   {
-    id: "doc-1",
     title: "KADA Fullstack Bootcamp Overview",
     source: "ai_summary_hard",
     text: "Korea-ASEAN Digital Academy (KADA) di BPPTIK adalah program pelatihan talenta digital hasil kerja sama Kementerian Komdigi RI dan Korea Selatan. Dilaksanakan secara onsite di BPPTIK Cikarang, program 2,5 bulan ini berfokus pada AI, data, dan cloud untuk menyiapkan talenta muda bekerja di perusahaan multinasional. Berikut adalah poin-poin kunci mengenai program KADA di BPPTIK: Lokasi & Pelaksana: Diselenggarakan oleh BPPTIK Komdigi (Balai Pelatihan dan Pengembangan Teknologi Informasi dan Komunikasi) yang berlokasi di Cikarang, Kabupaten Bekasi. Fasilitas Pelatihan: Peserta mendapatkan pelatihan intensif, fasilitas asrama, ruang kelas, dan sarana lainnya di BPPTIK. Tujuan: Mengembangkan kompetensi digital generasi muda Indonesia, terutama dalam bidang Kecerdasan Buatan (AI), Programming, Cloud Service, dan Analisis Data. Target Peserta: Umumnya ditujukan bagi fresh graduate atau mahasiswa tingkat akhir, dengan target total 240 peserta dalam 4 batch selama 2025-2026. Program ini menjadi salah satu pusat unggulan untuk melahirkan talenta digital yang sesuai dengan kebutuhan industri global",

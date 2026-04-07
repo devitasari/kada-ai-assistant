@@ -7,7 +7,7 @@ async function generateText(prompt, modelOverride = null) {
     async () => {
       return await ai.models.generateContent({
         model: modelOverride || env.geminiModel,
-        contents: prompt,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
     },
     {
@@ -19,6 +19,23 @@ async function generateText(prompt, modelOverride = null) {
   return response.text?.trim() || "";
 }
 
+async function generateEmbedding(text, taskType = "RETRIEVAL_QUERY") {
+  const response = await withRetry(async () => {
+    return await ai.models.embedContent({
+      model: "models/gemini-embedding-001",
+      contents: [{ parts: [{ text }] }],
+      config: { taskType },
+    });
+  });
+
+  if (!response || !response.embeddings || !response.embeddings[0]) {
+    throw new Error("Failed to generate embedding");
+  }
+
+  return response.embeddings[0].values;
+}
+
 export const geminiService = {
   generateText,
+  generateEmbedding,
 };
