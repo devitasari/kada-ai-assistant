@@ -1,38 +1,41 @@
 # KADA AI Assistant
 
-**KADA AI Assistant** is an AI-powered customer support backend for KADA Bootcamp, built with a **hybrid Retrieval-Augmented Generation (RAG)** architecture using **Gemini API**, **Supabase vector search**, and **intent-based orchestration**.
+**KADA AI Assistant** is a production-grade AI backend designed to power intelligent customer support for the KADA Bootcamp.  
+It delivers **accurate, structured, and context-aware responses** using a **hybrid Retrieval-Augmented Generation (RAG) architecture, intent-based routing, and Gemini LLM integration**.
 
-It is designed to answer questions about **programs, schedules, pricing, registration, and general KADA information** with grounded, structured, and context-aware responses.
-
----
-
-## 🚀 Overview
-
-This project is not a generic chatbot.
-
-It is a **production-oriented AI backend** that combines:
-
-- **Intent classification**
-- **Structured tool-based retrieval**
-- **Semantic vector retrieval (RAG)**
-- **Prompt grounding**
-- **Multi-turn conversation memory**
-- **Structured JSON output**
-- **Fallback and human escalation logic**
-
-Instead of sending every user message directly to the LLM, the system first determines the best response strategy:
-
-- **Deterministic retrieval** for business-specific intents such as pricing, schedules, and registration
-- **Semantic vector retrieval** for broader informational questions using a Supabase-powered knowledge base
-
-This results in a more accurate, efficient, and reliable customer support assistant.
+Built with scalability and reliability in mind, this system goes beyond a typical chatbot by combining **deterministic business logic + semantic AI retrieval**.
 
 ---
 
-## ✨ Key Features
+## 🚀 Product Overview
 
-### 1) Intent Classification
-The assistant classifies user messages into domain-specific intents:
+KADA AI Assistant acts as an **AI support layer for bootcamp operations**, handling inquiries about:
+
+- Programs & curriculum
+- Pricing & payments
+- Schedules & batches
+- Registration flow
+- General institutional information
+
+Instead of relying solely on an LLM, the system intelligently decides how to respond using a **multi-layer reasoning pipeline**:
+
+- Structured business logic for precise answers
+- Vector-based retrieval for contextual knowledge
+- LLM generation only when needed
+
+This design significantly improves:
+- Answer accuracy
+- Response consistency
+- Cost efficiency
+- Hallucination control
+
+---
+
+## 🧠 Core Architecture Highlights
+
+### 1. Intent-Based Routing System
+
+The assistant first classifies every user query into structured intents:
 
 - `GET_PROGRAMS`
 - `GET_SCHEDULE`
@@ -41,79 +44,71 @@ The assistant classifies user messages into domain-specific intents:
 - `GENERAL_KADA`
 - `OUT_OF_SCOPE`
 
-This enables the backend to decide whether to:
-- use structured data retrieval,
-- perform semantic document retrieval,
-- or safely fall back when the query is unsupported.
+This enables the system to **avoid unnecessary LLM calls** and route queries to the most reliable execution path.
 
 ---
 
-### 2) Hybrid / Selective RAG Architecture
-This project uses a **hybrid RAG** strategy:
+### 2. Hybrid RAG (Retrieval-Augmented Generation)
 
-- **Structured retrieval** for deterministic business intents  
-  (e.g. pricing, schedules, registration)
-- **Semantic retrieval** for broader knowledge questions  
-  (e.g. general KADA information)
+A key engineering highlight of this project is its **hybrid RAG architecture**:
 
-This architecture is more practical than sending all queries through vector search because it:
-- reduces unnecessary retrieval calls,
-- improves latency and cost efficiency,
-- keeps deterministic answers more reliable,
-- and still benefits from semantic search when natural-language knowledge lookup is needed.
+- **Structured Retrieval (Deterministic Path)**  
+  Used for business-critical queries like pricing, schedule, and registration.
 
----
+- **Semantic Retrieval (Vector Search via Supabase)**  
+  Used for natural language questions requiring contextual understanding.
 
-### 3) Semantic Retrieval with Supabase Vector Search
-For general knowledge queries, the assistant performs **embedding-based retrieval** using a **Supabase vector database**.
-
-Typical flow:
-1. User asks a question
-2. Relevant documents are retrieved through **vector similarity search**
-3. Top-matching context is injected into the prompt
-4. Gemini generates a grounded answer based on retrieved knowledge
-
-This reduces hallucination and improves domain relevance.
+This hybrid approach ensures:
+- Higher accuracy for business data
+- Lower hallucination risk
+- Better performance and cost optimization
+- Cleaner separation between logic and knowledge retrieval
 
 ---
 
-### 4) Prompt Grounding
-Before calling the LLM, the system assembles a grounded prompt using:
+### 3. Vector Search with Supabase
 
-- system instructions,
-- conversation history,
-- detected intent,
-- structured tool context,
-- and retrieved semantic knowledge.
+For knowledge-based queries, the system uses **Supabase vector embeddings** to perform semantic similarity search.
 
-This makes the response more aligned with real KADA information instead of relying only on the model’s internal knowledge.
+Flow:
+1. User query is embedded
+2. Similar documents are retrieved from vector DB
+3. Top results are injected into prompt context
+4. Gemini generates grounded responses
+
+This ensures answers are **anchored in real KADA knowledge base content**.
 
 ---
 
-### 5) Multi-Turn Conversation Support
-The assistant preserves **session history** so follow-up questions remain contextual.
+### 4. LLM Prompt Grounding Strategy
 
-Examples:
-- “How much is the Fullstack program?”
+Instead of sending raw user input to the model, the system builds a **structured grounded prompt** containing:
+
+- Intent classification result
+- Conversation history
+- Retrieved knowledge (if any)
+- Tool-based business context
+- System-level constraints
+
+This reduces hallucination and enforces **consistent, structured outputs**.
+
+---
+
+### 5. Multi-Turn Conversation Memory
+
+The assistant maintains session-based history to support natural follow-ups such as:
+
+- “How much is the fullstack program?”
 - “What about the next batch?”
-- “Yes, explain more.”
+- “Yes, explain more”
 
-This makes the interaction feel natural and stateful.
+This enables a **stateful conversational experience** instead of stateless Q&A.
 
 ---
 
-## Structured JSON Request Response Contract
+## 📦 Structured Output Contract
 
-Request
-
-```json
-{
-  "sessionId": "user-0",
-  "message": "Berapa biaya investasinya?"
-}
-```
-
-The LLM is guided to return a predictable response schema such as:
+All responses follow a strict JSON schema to ensure backend reliability and frontend predictability:
 
 ```json
 {
@@ -124,55 +119,64 @@ The LLM is guided to return a predictable response schema such as:
   "sources": []
 }
 ```
----
+This allows:
 
-## 🧠 High Level Flow
+Frontend UI control
+Escalation to human support
+Confidence-based decision making
+Safe production integration
+
+---
+## 🧠 End to End System Flow
 
 ```text
 User Message
    ↓
-Load Session History
+Session & History Loader
    ↓
-Intent Classification / Tool Orchestration
+Intent Classification
    ↓
-┌──────────────────────────────────────────────┐
-│ If deterministic business intent            │
-│ → Structured retrieval / tool-based context │
-└──────────────────────────────────────────────┘
+Routing Layer
+   ├─ Structured Business Tools (Pricing/Schedule/Registration)
+   ├─ Vector Retrieval (Supabase RAG)
+   └─ Out-of-scope Handling
    ↓
-┌──────────────────────────────────────────────┐
-│ If GENERAL_KADA                             │
-│ → Semantic retrieval from Supabase vector DB│
-└──────────────────────────────────────────────┘
+Prompt Assembly (Grounded Context)
    ↓
-Prompt Assembly
-  - System Prompt
-  - History
-  - Intent
-  - Tool Context
-  - Retrieved Knowledge
-   ↓
-Gemini Response Generation
+Gemini LLM Generation
    ↓
 Structured JSON Parsing
    ↓
-Fallback Handling
+Fallback & Safety Handling
    ↓
-Source Injection
+Response Delivery
    ↓
-Persist History + Chat Logs
-   ↓
-API Response
+Logging + Memory Persistence
 ```
 ---
 
-## Running Locally
+## 💡 Engineering Highlights
 
+This project demonstrates:
+
+Production-ready AI system design (not just chatbot logic)
+Clean separation of retrieval vs reasoning vs business logic
+Hybrid RAG + tool orchestration architecture
+Structured output enforcement for backend reliability
+Scalable design for real-world customer support use cases
+Strong focus on hallucination reduction + grounding
+
+---
+
+## Local Setup
+
+```
 - git clone https://github.com/devitasari/kada-ai-assistant.git
 - cd kada-ai-assistant
 - npm install
 - create .env file based on .env.example
 - npm run dev
+```
 
 ---
 
@@ -242,3 +246,15 @@ kada-ai-assistant/
 - Conversation history management
 - Structured JSON output parsing
 - Chat logging / observability
+
+---
+
+## Why This Project Matters
+
+KADA AI Assistant is designed to reflect real-world AI engineering patterns, including:
+
+Hybrid reasoning systems (rules + LLM + retrieval)
+Production-safe AI responses
+Scalable backend architecture
+Clean separation of concerns
+Enterprise-ready conversational AI design
